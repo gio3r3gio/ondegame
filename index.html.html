@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indovina la lunghezza d'onda</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #282c34;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+        }
+        input, button {
+            padding: 10px;
+            margin: 10px;
+            font-size: 16px;
+        }
+        .color-box, .wave-box {
+            width: 200px;
+            height: 100px;
+            margin: 20px;
+            background-color: black;
+            display: inline-block;
+        }
+        .wave-box {
+            width: 300px;
+            background-color: white;
+        }
+        #result, #accuracy {
+            margin-top: 20px;
+        }
+        canvas {
+            border: 1px solid white;
+            background-color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Indovina la lunghezza d'onda (380 - 780 nm)</h1>
+        
+        <!-- Rettangoli di colore -->
+        <div>
+            <div class="color-box" id="targetColor"></div>
+            <div class="color-box" id="guessColor"></div>
+        </div>
+
+        <!-- Rettangoli per l'onda -->
+        <div>
+            <canvas class="wave-box" id="targetWave" width="300" height="100"></canvas>
+            <canvas class="wave-box" id="guessWave" width="300" height="100"></canvas>
+        </div>
+
+        <!-- Input e bottoni -->
+        <input type="number" id="wavelengthInput" placeholder="Inserisci una lunghezza d'onda">
+        <br>
+        <button onclick="checkGuess()">Indovina</button>
+        <button onclick="newGame()">Nuova partita</button>
+
+        <!-- Risultati -->
+        <div id="result"></div>
+        <div id="accuracy"></div>
+    </div>
+
+    <script>
+        let currentWavelength = null;
+
+        function wavelengthToRgb(wavelength) {
+            let R = 0, G = 0, B = 0;
+            if (wavelength >= 380 && wavelength < 440) {
+                R = -(wavelength - 440) / (440 - 380);
+                G = 0.0;
+                B = 1.0;
+            } else if (wavelength >= 440 && wavelength < 490) {
+                R = 0.0;
+                G = (wavelength - 440) / (490 - 440);
+                B = 1.0;
+            } else if (wavelength >= 490 && wavelength < 510) {
+                R = 0.0;
+                G = 1.0;
+                B = -(wavelength - 510) / (510 - 490);
+            } else if (wavelength >= 510 && wavelength < 580) {
+                R = (wavelength - 510) / (580 - 510);
+                G = 1.0;
+                B = 0.0;
+            } else if (wavelength >= 580 && wavelength < 645) {
+                R = 1.0;
+                G = -(wavelength - 645) / (645 - 580);
+                B = 0.0;
+            } else if (wavelength >= 645 && wavelength <= 780) {
+                R = 1.0;
+                G = 0.0;
+                B = 0.0;
+            }
+
+            let factor = 0.3 + 0.7 * (wavelength >= 420 && wavelength <= 645
+                ? 1
+                : wavelength < 420
+                ? (wavelength - 380) / (420 - 380)
+                : (780 - wavelength) / (780 - 645));
+
+            return `rgb(${Math.round(R * factor * 255)}, ${Math.round(G * factor * 255)}, ${Math.round(B * factor * 255)})`;
+        }
+
+        function drawWave(canvasId, wavelength) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext("2d");
+
+            // Pulizia del canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Configura l'onda sinusoidale con una maggiore variazione di frequenza
+            const amplitude = 30;
+            const frequency = 780 / wavelength * 4;  // Fattore aumentato per distinguere meglio le onde
+            const offsetY = canvas.height / 2;
+
+            ctx.beginPath();
+            for (let x = 0; x < canvas.width; x++) {
+                const y = amplitude * Math.sin((frequency * x * Math.PI) / 180) + offsetY;
+                ctx.lineTo(x, y);
+            }
+            ctx.strokeStyle = wavelengthToRgb(wavelength);
+            ctx.stroke();
+        }
+
+        function newGame() {
+            currentWavelength = Math.floor(Math.random() * (780 - 380 + 1)) + 380;
+            document.getElementById("targetColor").style.backgroundColor = wavelengthToRgb(currentWavelength);
+            document.getElementById("guessColor").style.backgroundColor = 'black';
+            drawWave('targetWave', currentWavelength);
+            drawWave('guessWave', 0);  // Resetta l'onda dell'ipotesi
+            document.getElementById("result").innerText = '';
+            document.getElementById("accuracy").innerText = 'Precisione: -';
+        }
+
+        function checkGuess() {
+            const guess = parseFloat(document.getElementById("wavelengthInput").value);
+            if (isNaN(guess) || guess < 380 || guess > 780) {
+                alert("Inserisci un valore tra 380 e 780 nm.");
+                return;
+            }
+
+            const difference = Math.abs(guess - currentWavelength);
+            const accuracy = Math.max(0, 100 - (difference / 4));
+            document.getElementById("result").innerText = `Lunghezza d'onda corretta: ${currentWavelength} nm\nLa tua ipotesi: ${guess.toFixed(2)} nm`;
+            document.getElementById("accuracy").innerText = `Precisione: ${accuracy.toFixed(2)}%`;
+            
+            // Mostra il colore e l'onda ipotizzata
+            document.getElementById("guessColor").style.backgroundColor = wavelengthToRgb(guess);
+            drawWave('guessWave', guess);
+        }
+
+        window.onload = newGame;
+    </script>
+
+</body>
+</html>
